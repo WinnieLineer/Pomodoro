@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄鐘 - 提升你的專注力</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #fff, #f5f5f5);
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .container {
+            background: #fff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            position: relative;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #ff6347; /* 番茄紅 */
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        h1::before {
+            content: "🍅";
+            margin-right: 10px;
+        }
+
+        #timer {
+            font-size: 3em;
+            font-weight: bold;
+            color: #ff6347;
+            margin: 20px 0;
+            background: rgba(255, 99, 71, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+
+        #status {
+            font-size: 1.2em;
+            color: #555;
+            margin-bottom: 10px;
+        }
+
+        #cycle {
+            font-size: 1em;
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        #startPauseBtn {
+            background: #ff6347;
+            color: white;
+        }
+
+        #startPauseBtn:hover {
+            background: #e5533d;
+            transform: scale(1.05);
+        }
+
+        #resetBtn {
+            background: #ccc;
+            color: #333;
+        }
+
+        #resetBtn:hover {
+            background: #b0b0b0;
+            transform: scale(1.05);
+        }
+
+        /* 番茄動畫背景元素 */
+        .tomato {
+            position: absolute;
+            font-size: 50px;
+            opacity: 0.2;
+            animation: float 8s infinite ease-in-out;
+        }
+
+        .tomato:nth-child(1) { top: 10%; left: 10%; }
+        .tomato:nth-child(2) { top: 70%; left: 15%; }
+        .tomato:nth-child(3) { top: 20%; right: 10%; }
+        .tomato:nth-child(4) { top: 80%; right: 15%; }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* RWD 手機版調整 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+                width: 90%;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            #timer {
+                font-size: 2.5em;
+            }
+
+            button {
+                padding: 8px 15px;
+                font-size: 0.9em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="tomato">🍅</div>
+    <div class="tomato">🍅</div>
+    <div class="tomato">🍅</div>
+    <div class="tomato">🍅</div>
+    <div class="container">
+        <h1>番茄鐘</h1>
+        <div id="status">工作時間</div>
+        <div id="timer">25:00</div>
+        <div id="cycle">番茄週期：1/4</div>
+        <div class="buttons">
+            <button id="startPauseBtn" onclick="toggleTimer()">開始</button>
+            <button id="resetBtn" onclick="resetTimer()">重置</button>
+        </div>
+    </div>
+
+    <audio id="alarmSound" src="https://www.soundjay.com/buttons/beep-01a.mp3"></audio>
+
+    <script>
+        let isRunning = false;
+        let isWorkTime = true; // 工作或休息
+        let cycle = 1; // 當前番茄週期
+        let timeLeft = 25 * 60; // 預設 25 分鐘（秒）
+        let timerInterval = null;
+
+        const timerDisplay = document.getElementById('timer');
+        const statusDisplay = document.getElementById('status');
+        const cycleDisplay = document.getElementById('cycle');
+        const startPauseBtn = document.getElementById('startPauseBtn');
+        const alarmSound = document.getElementById('alarmSound');
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function toggleTimer() {
+            if (isRunning) {
+                clearInterval(timerInterval);
+                startPauseBtn.textContent = '開始';
+            } else {
+                timerInterval = setInterval(() => {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        updateTimerDisplay();
+                    } else {
+                        alarmSound.play(); // 播放提示音
+                        if (isWorkTime) {
+                            // 工作結束，進入休息
+                            isWorkTime = false;
+                            timeLeft = (cycle % 4 === 0) ? 15 * 60 : 5 * 60; // 4 個番茄後長休息 15 分鐘，否則 5 分鐘
+                            statusDisplay.textContent = (cycle % 4 === 0) ? '長休息' : '短休息';
+                        } else {
+                            // 休息結束，進入下一個番茄
+                            isWorkTime = true;
+                            cycle = (cycle % 4 === 0) ? 1 : cycle + 1; // 每 4 個番茄重置週期
+                            timeLeft = 25 * 60; // 工作時間 25 分鐘
+                            statusDisplay.textContent = '工作時間';
+                            cycleDisplay.textContent = `番茄週期：${cycle}/4`;
+                        }
+                        updateTimerDisplay();
+                    }
+                }, 1000);
+                startPauseBtn.textContent = '暫停';
+            }
+            isRunning = !isRunning;
+        }
+
+        function resetTimer() {
+            clearInterval(timerInterval);
+            isRunning = false;
+            isWorkTime = true;
+            cycle = 1;
+            timeLeft = 25 * 60;
+            statusDisplay.textContent = '工作時間';
+            cycleDisplay.textContent = `番茄週期：${cycle}/4`;
+            startPauseBtn.textContent = '開始';
+            updateTimerDisplay();
+        }
+
+        // 初始化顯示
+        updateTimerDisplay();
+    </script>
+</body>
+</html>
